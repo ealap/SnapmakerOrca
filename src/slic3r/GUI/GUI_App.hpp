@@ -412,6 +412,7 @@ private:
     bool is_editor() const { return m_app_mode == EAppMode::Editor; }
     bool is_gcode_viewer() const { return m_app_mode == EAppMode::GCodeViewer; }
     bool is_recreating_gui() const { return m_is_recreating_gui; }
+    bool is_closing() const { return m_is_closing; }
     bool flutter_web_config_update_dlg_open() const
     {
         return m_flutter_web_config_update_dlg_open.load(std::memory_order_acquire);
