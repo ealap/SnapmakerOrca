@@ -3,6 +3,20 @@
 
 [![Build all](https://github.com/Snapmaker/OrcaSlicer/actions/workflows/build_all.yml/badge.svg?branch=main)](https://github.com/Snapmaker/OrcaSlicer/actions/workflows/build_all.yml)
 <br>Snapmaker Orca is an open source slicer for FDM printers based on OrcaSlicer.
+
+---
+
+> **Community patches branch — personal use only**
+>
+> The `snapmaker/community-patches` branch applies unofficial bug fixes on top of the upstream Snapmaker Orca release. It is maintained for personal use and comes with no guarantees.
+>
+> - **No support is offered.** Issues, questions, and pull requests on this branch will not be addressed.
+> - **Use at your own risk.** These patches are not tested beyond one person's workflow and may introduce new bugs or break existing functionality.
+> - **AI-assisted development.** Patches on this branch were developed with the assistance of AI tools. All changes have been reviewed, but mistakes are possible.
+>
+> For the official release, visit the [Snapmaker OrcaSlicer repository](https://github.com/Snapmaker/OrcaSlicer).
+
+---
  
 
 
