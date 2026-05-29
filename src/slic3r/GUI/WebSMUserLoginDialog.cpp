@@ -191,6 +191,14 @@ void SMUserLogin::OnNavigationRequest(wxWebViewEvent &evt)
             token = tmpUrl.substr(start).ToStdString();
         }
 
+        auto info = wxGetApp().sm_get_userinfo();
+        info->set_user_login(true);
+        info->set_user_token(token);
+
+        // BBS: persist login token so it survives app restart (issue #116)
+        if (wxGetApp().app_config)
+            wxGetApp().app_config->set("sm_user_token", token);
+
         this->EndModal(wxID_OK);
 
         wxGetApp().CallAfter([token, this]() {
@@ -209,9 +217,17 @@ void SMUserLogin::OnNavigationRequest(wxWebViewEvent &evt)
                             }
                             if (data.count("nickname")) {
                                 wxGetApp().sm_get_userinfo()->set_user_name(data["nickname"].get<std::string>());
+                                // BBS: persist user name so it survives app restart (issue #116)
+                                if (wxGetApp().app_config)
+                                    wxGetApp().app_config->set("sm_user_name", data["nickname"].get<std::string>());
                             }
                             if (data.count("icon")) {
                                 wxGetApp().sm_get_userinfo()->set_user_icon_url(data["icon"].get<std::string>());
+                                // BBS: persist user icon so it survives app restart (issue #116)
+                                if (wxGetApp().app_config) {
+                                    wxGetApp().app_config->set("sm_user_icon_url", data["icon"].get<std::string>());
+                                    wxGetApp().app_config->save();
+                                }
                             }
                             if (data.count("account")) {
                                 wxGetApp().sm_get_userinfo()->set_user_account(data["account"].get<std::string>());
@@ -221,6 +237,7 @@ void SMUserLogin::OnNavigationRequest(wxWebViewEvent &evt)
                         sentryReportLog(SENTRY_LOG_TRACE, userInfo, BP_LOGIN);
                         wxGetApp().sm_get_userinfo()->set_user_token(token);
                         wxGetApp().sm_get_userinfo()->set_user_login(true);
+                        wxGetApp().sm_save_login_to_config();
                     }
                 })
                 .on_error([&](std::string body, std::string error, unsigned status) {

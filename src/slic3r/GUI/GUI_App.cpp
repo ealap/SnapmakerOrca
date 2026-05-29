@@ -1100,6 +1100,10 @@ void GUI_App::post_init()
             mainframe->refresh_plugin_tips();
         });
 
+    CallAfter([this] {
+            sm_restore_login_from_config();
+        });
+
     // update hms info
     CallAfter([this] {
             if (hms_query)
@@ -2054,6 +2058,15 @@ void GUI_App::init_download_path()
 #if wxUSE_WEBVIEW_EDGE
 void GUI_App::init_webview_runtime()
 {
+    // BBS: force WebView2 to use the current user's profile directory (issue #100).
+    // Without this, WebView2 may fall back to a cached registry path that points to
+    // the account that originally installed the app (e.g. Admin), causing a write-
+    // permission failure for standard users on Windows.
+    {
+        std::string webview_data_dir = data_dir() + "/EBWebView";
+        wxSetEnv(wxS("WEBVIEW2_USER_DATA_FOLDER"), wxString::FromUTF8(webview_data_dir));
+    }
+
     // Check WebView Runtime
     if (!WebView::CheckWebViewRuntime()) {
         int nRet = wxMessageBox(_L("Snapmaker Orca requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
@@ -2168,6 +2181,22 @@ void GUI_App::init_app_config()
     }
     MixedFilamentManager::set_auto_generate_enabled(app_config->get_bool("auto_generate_gradients"));
     set_logging_level(Slic3r::level_string_to_boost(app_config->get("log_severity_level")));
+
+    // BBS: restore Snapmaker login state from AppConfig (issue #116)
+    // WebKit on macOS/Linux does not persist session cookies, so we serialise the token ourselves.
+    if (app_config) {
+        std::string sm_token = app_config->get("sm_user_token");
+        if (!sm_token.empty()) {
+            m_login_userinfo.set_user_token(sm_token);
+            m_login_userinfo.set_user_login(true);
+            std::string sm_name = app_config->get("sm_user_name");
+            if (!sm_name.empty())
+                m_login_userinfo.set_user_name(sm_name);
+            std::string sm_icon = app_config->get("sm_user_icon_url");
+            if (!sm_icon.empty())
+                m_login_userinfo.set_user_icon_url(sm_icon);
+        }
+    }
 
 }
 
@@ -4127,7 +4156,14 @@ void GUI_App::sm_ShowUserLogin(bool show)
 void GUI_App::sm_request_user_logout()
 {
     if (m_login_userinfo.is_user_login()) {
-        m_login_userinfo.set_user_login(false);
+        m_login_userinfo.clear();
+        // BBS: erase persisted login state so credentials are not restored on next launch (issue #116)
+        if (app_config) {
+            app_config->set("sm_user_token", "");
+            app_config->set("sm_user_name", "");
+            app_config->set("sm_user_icon_url", "");
+            app_config->save();
+        }
     }
     try {
         wxString region = wxString::FromUTF8(app_config->get_country_code());
@@ -4143,7 +4179,73 @@ void GUI_App::sm_request_user_logout()
     } catch (std::exception&) {
         ;
     }
+    sm_clear_login_from_config();
 }
+
+void GUI_App::sm_save_login_to_config()
+{
+    app_config->set("sm_login", "token", m_login_userinfo.get_user_token());
+    app_config->set("sm_login", "user_id", m_login_userinfo.get_user_id());
+    app_config->set("sm_login", "user_name", m_login_userinfo.get_user_name());
+    app_config->set("sm_login", "user_account", m_login_userinfo.get_user_account());
+    app_config->set("sm_login", "user_icon_url", m_login_userinfo.get_user_icon_url());
+}
+
+void GUI_App::sm_clear_login_from_config()
+{
+    app_config->set("sm_login", "token", "");
+    app_config->set("sm_login", "user_id", "");
+    app_config->set("sm_login", "user_name", "");
+    app_config->set("sm_login", "user_account", "");
+    app_config->set("sm_login", "user_icon_url", "");
+}
+
+void GUI_App::sm_restore_login_from_config()
+{
+    std::string token = app_config->get("sm_login", "token");
+    if (token.empty())
+        return;
+
+    auto region = app_config->get_country_code();
+    std::string user_info_url;
+    if (region.find("CN") == std::string::npos)
+        user_info_url = "https://id.snapmaker.com/api/common/accounts/current";
+    else
+        user_info_url = "https://api.snapmaker.cn/api/common/accounts/current";
+
+    auto http = Http::get(user_info_url);
+    http.header("Authorization", token);
+    http.on_complete([this, token](std::string body, unsigned status) {
+            if (status != 200) {
+                CallAfter([this]() { sm_clear_login_from_config(); });
+                return;
+            }
+            try {
+                json response = json::parse(body);
+                if (response.count("data")) {
+                    json data = response["data"];
+                    if (data.count("id"))
+                        m_login_userinfo.set_user_id(std::to_string(data["id"].get<int>()));
+                    if (data.count("nickname"))
+                        m_login_userinfo.set_user_name(data["nickname"].get<std::string>());
+                    if (data.count("icon"))
+                        m_login_userinfo.set_user_icon_url(data["icon"].get<std::string>());
+                    if (data.count("account"))
+                        m_login_userinfo.set_user_account(data["account"].get<std::string>());
+                }
+                m_login_userinfo.set_user_token(token);
+                m_login_userinfo.set_user_login(true);
+                sm_save_login_to_config();
+            } catch (std::exception &) {
+                CallAfter([this]() { sm_clear_login_from_config(); });
+            }
+        })
+        .on_error([this](std::string, std::string, unsigned) {
+            CallAfter([this]() { sm_clear_login_from_config(); });
+        })
+        .perform_sync();
+}
+
 
 //BBS
 void GUI_App::request_login(bool show_user_info)
