@@ -1563,7 +1563,7 @@ WipeTower::ToolChangeResult WipeTower2::emit_planned_tool_change(const WipeTower
     if (m_build_mode == 1 /*wtbmSideBySide*/ && !m_filpar.empty() && tool != (unsigned int)(-1)) {
         const size_t num_cols  = m_filpar.size();
         const float  col_inner = (m_wipe_tower_width - (float(num_cols) + 1.f) * m_perimeter_width) / float(num_cols);
-        const size_t col_idx   = std::min(tool, (unsigned int)(num_cols - 1));
+        const size_t col_idx   = std::min(tool, num_cols - 1);
         cleaning_box_x         = m_perimeter_width / 2.f + float(col_idx) * (col_inner + m_perimeter_width);
         cleaning_box_width     = col_inner;
         // Override m_depth_traversed with this column's accumulated depth so that toolchange
@@ -1627,7 +1627,7 @@ WipeTower::ToolChangeResult WipeTower2::emit_planned_tool_change(const WipeTower
     m_active_tool_change = nullptr;
     // BBS: issue #173 - in side-by-side mode restore global depth and update per-tool counter
     if (m_build_mode == 1 /*wtbmSideBySide*/ && tool != (unsigned int)(-1) && !m_per_tool_depth_traversed.empty()) {
-        const size_t col_idx = std::min(tool, (unsigned int)(m_per_tool_depth_traversed.size() - 1));
+        const size_t col_idx = std::min(tool, m_per_tool_depth_traversed.size() - 1);
         m_per_tool_depth_traversed[col_idx] += wipe_area;
         m_depth_traversed = saved_depth_traversed; // restore global depth (unused in side-by-side)
     } else {
