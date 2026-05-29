@@ -2487,7 +2487,7 @@ void MainFrame::init_menubar_as_editor()
         fileMenu->AppendSeparator();
 
 #ifndef __APPLE__
-        append_menu_item(fileMenu, wxID_EXIT, _L("Quit"), wxString::Format(_L("Quit")),
+        append_menu_item(fileMenu, wxID_EXIT, _L("Quit") + "\tCtrl+Q", wxString::Format(_L("Quit")),
             [this](wxCommandEvent&) { Close(false); }, "menu_exit", nullptr);
 #else
         append_menu_item(fileMenu, wxID_EXIT, _L("Quit"), wxString::Format(_L("Quit")),
@@ -3182,7 +3182,7 @@ void MainFrame::init_menubar_as_gcodeviewer()
             [](wxCommandEvent&) { start_new_slicer(); }, "", nullptr,
             []() {return true; }, this);
         fileMenu->AppendSeparator();
-        append_menu_item(fileMenu, wxID_EXIT, _L("&Quit"), wxString::Format(_L("Quit %s"), SLIC3R_APP_NAME),
+        append_menu_item(fileMenu, wxID_EXIT, _L("&Quit") + "\tCtrl+Q", wxString::Format(_L("Quit %s"), SLIC3R_APP_NAME),
             [this](wxCommandEvent&) { Close(false); });
     }
 
