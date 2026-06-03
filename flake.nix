@@ -1,7 +1,7 @@
 {
 	description = "Snapmaker Orca Slicer — community-patched fork";
 
-	inputs.nixpkgs.url = "github:ealap/nix-packages/64c08a7ca051951c8eae34e3e3cb1e202fe36786";
+	inputs.nixpkgs.url = "github:ealap/nix-packages/331800de5053fcebacf6813adb5db9c9dca22a0c";
 
 	outputs = {
 		self,
